@@ -45,17 +45,41 @@ Chicken.GameState = {
         //load level information
         this.loadLevel();
 
-        this.enemy = this.add.sprite(100, 100, 'pig');
-        this.enemies.add(this.enemy);
+        //init chicken shooting
+        this.pole = this.add.sprite(180, 500, 'pole');
+        this.pole.anchor.setTo(0.5, 0);
 
-        this.enemy.body.setCollisionGroup(this.enemiesCollisionGroup);
-        this.enemy.body.collides([this.blocksCollisionGroup, this.enemiesCollisionGroup, this.chickensCollisionGroup]);
+        this.game.input.onDown.add(this.prepareShot, this);
 
-        this.enemy.body.onBeginContact.add(this.hitEnemy, this.enemy);
+        //prepare our first chicken
+        this.setupChicken();
 
     },
     update: function() {
+        if(this.isPreparingShot) {
+            //make the chicken follow the user input pointer
+            this.chicken.x = this.game.input.activePointer.position.x;
+            this.chicken.y = this.game.input.activePointer.position.y;
 
+            //if too far away stop shot preparation
+            var distance = Phaser.Point.distance(this.chicken.position, this.pole.position);
+
+            if(distance > this.MAX_DISTANCE_SHOT){
+                this.isPreparingShot = false;
+                this.isChickenReady = true;
+
+                this.chicken.x = this.pole.x;
+                this.chicken.y = this.pole.y;
+            }
+
+            //shoot when releasing
+            if(this.game.input.activePointer.isUp) {
+                console.log("Shooting");
+                this.isPreparingShot = false;
+
+                //this.throwChicken();
+            }
+        }
     },
     gameOver: function() {
         this.game.state.start('Game', true, false, this.currentLevel);
@@ -66,6 +90,11 @@ Chicken.GameState = {
         //create all the blocks
         this.levelData.blocks.forEach(function(block) {
             this.createBlock(block);
+        }, this);
+
+        //create all the enemies
+        this.levelData.enemies.forEach(function(enemy) {
+            this.createEnemy(enemy);
         }, this);
     },
     createBlock: function(data) {
@@ -83,6 +112,21 @@ Chicken.GameState = {
 
         return block;
     },
+    createEnemy: function(data) {
+        var enemy = new Phaser.Sprite(this.game, data.x, data.y, data.asset);
+        this.enemies.add(enemy);
+
+        //set the collision group
+        enemy.body.setCollisionGroup(this.enemiesCollisionGroup);
+
+        //they will collide with
+        enemy.body.collides([this.blocksCollisionGroup, this.enemiesCollisionGroup, this.chickensCollisionGroup]);
+
+        //call hitEnemy when the enemies hit something
+        enemy.body.onBeginContact.add(this.hitEnemy, enemy)
+
+        return enemy;
+    },
     hitEnemy: function(bodyB, shapeA, shapeB, shapeC, equation) {
         var velocityDiff = Phaser.Point.distance(
             new Phaser.Point(equation[0].bodyA.velocity[0], equation[0].bodyA.velocity[1]),
@@ -92,5 +136,18 @@ Chicken.GameState = {
         if(velocityDiff > Chicken.GameState.KILL_DIFF) {
             this.kill();
         }
+    },
+    prepareShot: function(event) {
+        if(this.isChickenReady) {
+            this.isPreparingShot = true;
+            this.isChickenReady = false;
+        }
+    },
+    setupChicken: function() {
+        //add chicken to starting position
+        this.chicken = this.add.sprite(this.pole.x, this.pole.y, 'bird');
+        this.chicken.anchor.setTo(0.5);
+
+        this.isChickenReady = true;
     }
 };
