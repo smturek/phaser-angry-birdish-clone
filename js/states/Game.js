@@ -77,7 +77,7 @@ Chicken.GameState = {
                 console.log("Shooting");
                 this.isPreparingShot = false;
 
-                //this.throwChicken();
+                this.throwChicken();
             }
         }
     },
@@ -96,6 +96,10 @@ Chicken.GameState = {
         this.levelData.enemies.forEach(function(enemy) {
             this.createEnemy(enemy);
         }, this);
+
+        this.countDeadEnemies = 0;
+        this.totalNumEnemies = this.levelData.enemies.length;
+        this.numChickens = 3;
     },
     createBlock: function(data) {
         var block = new Phaser.Sprite(this.game, data.x, data.y, data.asset);
@@ -135,6 +139,9 @@ Chicken.GameState = {
 
         if(velocityDiff > Chicken.GameState.KILL_DIFF) {
             this.kill();
+
+            //update dead enemies count
+            Chicken.GameState.updateDeadCount();
         }
     },
     prepareShot: function(event) {
@@ -149,5 +156,32 @@ Chicken.GameState = {
         this.chicken.anchor.setTo(0.5);
 
         this.isChickenReady = true;
+    },
+    throwChicken: function() {
+        //enable physics once it is thrown
+        this.game.physics.p2.enable(this.chicken);
+        this.chicken.body.setCollisionGroup(this.chickensCollisionGroup);
+        this.chicken.body.collides([this.blocksCollisionGroup, this.enemiesCollisionGroup, this.chickensCollisionGroup]);
+
+        //calculate the difference between the current position and the top of the pole
+        var diff = Phaser.Point.subtract(this.pole.position, this.chicken.position);
+
+        //set chicken velocity according to the difference vector
+        this.chicken.body.velocity.x = Math.abs(diff.x * this.SHOOT_FACTOR)/(diff.x * this.SHOOT_FACTOR) * Math.min(Math.abs(diff.x * this.SHOOT_FACTOR), this.MAX_SPEED_SHOT);
+        this.chicken.body.velocity.y = Math.abs(diff.y * this.SHOOT_FACTOR)/(diff.y * this.SHOOT_FACTOR) * Math.min(Math.abs(diff.y * this.SHOOT_FACTOR), this.MAX_SPEED_SHOT);
+
+        //What happens after the bird is thrown
+        this.endTurn();
+    },
+    updateDeadCount: function() {
+        this.countDeadEnemies++;
+
+        if(this.countDeadEnemies == this.totalNumEnemies) {
+            console.log("YOU WIN!");
+            this.gameOver();
+        }
+    },
+    endTurn: function() {
+        this.numChickens--;
     }
 };
