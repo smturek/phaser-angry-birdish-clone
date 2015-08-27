@@ -25,6 +25,8 @@ Chicken.GameState = {
         this.sky = this.add.tileSprite(0, 0, this.game.world.width, this.game.world.height, 'sky', 0);
         this.game.world.sendToBack(this.sky);
 
+        this.chickenHUD = this.add.group();
+
         //enemies
         this.enemies = this.add.group();
         this.enemies.enableBody = true;
@@ -156,6 +158,8 @@ Chicken.GameState = {
         this.chicken.anchor.setTo(0.5);
 
         this.isChickenReady = true;
+
+        this.refreshStats();
     },
     throwChicken: function() {
         //enable physics once it is thrown
@@ -183,5 +187,29 @@ Chicken.GameState = {
     },
     endTurn: function() {
         this.numChickens--;
+
+        //next chicken or game over
+        this.game.time.events.add(3 * Phaser.Timer.SECOND, function() {
+            this.chicken.kill();
+
+            //a second later, show new chicken if there are any left, else game over
+            this.game.time.events.add(Phaser.Timer.SECOND, function() {
+                if(this.numChickens > 0) {
+                    this.setupChicken();
+                }
+                else {
+                    this.gameOver();
+                }
+            }, this);
+        }, this);
+    },
+    refreshStats: function () {
+        this.chickenHUD.removeAll();
+
+        var i = 0;
+        while(i < this.numChickens) {
+            this.chickenHUD.create(this.game.width - 100 - i * 80, 30, 'bird');
+            i++;
+        }
     }
 };
